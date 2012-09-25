@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# Written by Andreas Pohl <apohl79@gmail.com>
+
+source /etc/nas.conf
+
+function init_raid() {
+    eval raid_device=\$RAID$1_DEVICE
+    eval raid_level=\$RAID$1_LEVEL
+    eval raid_num_disks=\$RAID$1_NUM_DISKS
+    echo "Initializing disks..."
+    error=0
+    count=0
+    while [ $count -lt $raid_num_disks ]; do
+	eval disk=\$RAID$1_DISK$count
+	let count=$count+1
+	if [ ! -e $disk ]; then
+	    echo "ERROR: $disk does not exist"
+	    error=1
+	else
+	    hdparm -S $STANDBY_TIMEOUT $disk
+	fi
+    done
+    if [ $error = 1 ]; then
+	exit 1
+    fi
+    # Assemble the raid. The raid has been created by:
+    #   mdadm --create $raid_device --raid-devices=$count --level=$raid_level --auto=yes $*
+    echo "Assembling RAID device $raid_device with level $raid_level and $count disks..."
+    mdadm --assemble $raid_device --auto=yes $*
+}
+
+function init_share() {
+    vg=$1
+    lv=$2
+    mp=$3
+    dev=/dev/$vg/$lv
+    # Try to find the volume group
+    if [ -z "$(vgscan 2>/dev/null|grep $vg)" ]; then
+	# no volume group found
+	echo "ERROR: No LVM volume group '$vg' found!"
+	exit 1
+    fi
+    echo "Activating LVM volume '$vg'..."
+    vgchange -a y $vg
+    echo "Mounting LVM volume $dev to $mp..."
+    mount $dev $mp
+    service samba start
+}
+
+case "$1" in
+    "status")
+	cat /proc/mdstat
+	;;
+    "start")
+	num=0
+	while [ $num -lt $NUM_RAIDS ]; do
+	    init_raid $num
+	    let num=$num+1
+	done
+	init_share $LVM_VG $LVM_LV $MOUNT_POINT 
+	;;
+    "stop")
+	service samba stop
+	umount $MOUNT_POINT
+	vgchange -a n $LVM_VG
+	num=0
+	while [ $num -lt $NUM_RAIDS ]; do
+	    eval raid=\$RAID$num_DEVICE
+	    mdadm --stop $raid
+	    let num=$num+1
+	done
+	;;
+    *)
+	echo "Usage: $0 [start|stop|status|help]"
+	;;
+esac
