@@ -11,8 +11,10 @@ function init_raid() {
     echo "Initializing disks..."
     error=0
     count=0
+    disks=""
     while [ $count -lt $raid_num_disks ]; do
 	eval disk=\$RAID$1_DISK$count
+	disks="$disks $disk"
 	let count=$count+1
 	if [ ! -e $disk ]; then
 	    echo "ERROR: $disk does not exist"
@@ -27,7 +29,7 @@ function init_raid() {
     # Assemble the raid. The raid has been created by:
     #   mdadm --create $raid_device --raid-devices=$count --level=$raid_level --auto=yes $*
     echo "Assembling RAID device $raid_device with level $raid_level and $count disks..."
-    mdadm --assemble $raid_device --auto=yes $*
+    mdadm --assemble $raid_device --auto=yes $disks
 }
 
 function init_share() {
