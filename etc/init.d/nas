@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Start the NAS and SMB daemon.
+#
+### BEGIN INIT INFO
+# Provides:          nas
+# Required-Start:    $local_fs $syslog
+# Required-Stop:     $local_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: NAS
+# Description:       NAS
+### END INIT INFO
+
+nas=/bin/nas
+
+case "$1" in
+    start)
+	$nas start
+	;;
+    stop)
+	$nas stop
+	;;
+    *)
+	echo "$0 {start|stop}"
+	;;
+esac
