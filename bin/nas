@@ -68,7 +68,7 @@ case "$1" in
 	vgchange -a n $LVM_VG
 	num=0
 	while [ $num -lt $NUM_RAIDS ]; do
-	    eval raid=\$RAID$num_DEVICE
+	    eval raid=\$RAID${num}_DEVICE
 	    mdadm --stop $raid
 	    let num=$num+1
 	done
