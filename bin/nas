@@ -4,6 +4,8 @@
 
 source /etc/nas.conf
 
+LOG=/var/log/nas.log
+
 function init_raid() {
     eval raid_device=\$RAID$1_DEVICE
     eval raid_level=\$RAID$1_LEVEL
@@ -55,11 +57,17 @@ function init_share() {
     fi
 }
 
+function redirect_output {
+    exec >> $LOG 2>&1
+}
+
 case "$1" in
     "status")
 	cat /proc/mdstat
 	;;
     "start")
+	redirect_output
+	date
 	num=0
 	while [ $num -lt $NUM_RAIDS ]; do
 	    init_raid $num
@@ -68,6 +76,8 @@ case "$1" in
 	init_share $LVM_VG $LVM_LV $MOUNT_POINT 
 	;;
     "stop")
+	redirect_output
+	date
 	if [ $SMB -gt 0 ]; then
 	    service samba stop
 	fi
