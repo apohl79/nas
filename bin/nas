@@ -28,8 +28,10 @@ function init_raid() {
     fi
     # Assemble the raid. The raid has been created by:
     #   mdadm --create $raid_device --raid-devices=$count --level=$raid_level --auto=yes $*
-    echo "Assembling RAID device $raid_device with level $raid_level and $count disks..."
-    mdadm --assemble $raid_device --auto=yes $disks
+    if [ ! -e $raid_device ]; then
+	echo "Assembling RAID device $raid_device with level $raid_level and $count disks..."
+	mdadm --assemble $raid_device --auto=yes $disks
+    fi
 }
 
 function init_share() {
@@ -47,7 +49,10 @@ function init_share() {
     vgchange -a y $vg
     echo "Mounting LVM volume $dev to $mp..."
     mount $dev $mp
-    service samba start
+    if [ $SMB -gt 0 ]; then
+	echo "Starting SMB..."
+	service samba start
+    fi
 }
 
 case "$1" in
@@ -63,7 +68,9 @@ case "$1" in
 	init_share $LVM_VG $LVM_LV $MOUNT_POINT 
 	;;
     "stop")
-	service samba stop
+	if [ $SMB -gt 0 ]; then
+	    service samba stop
+	fi
 	umount $MOUNT_POINT
 	vgchange -a n $LVM_VG
 	num=0
